@@ -94,3 +94,7 @@ def load_tm_labels():
         return pd.read_parquet("data/TM_labels.parquet")
     except Exception as e:
         return pd.DataFrame()
+    
+@st.cache_data
+def load_treemap_hierarchy():
+    return pd.read_parquet("data/treemap_hierarchy.parquet")

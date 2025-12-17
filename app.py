@@ -5,4 +5,5 @@ st.set_page_config(page_title="Lorraine Explorer v1", layout="wide")
 st.title("Lorraine Explorer v1")
 
 st.write("Use the sidebar to open a view:")
-st.page_link("pages/1_🏭_Lab_Overview.py", label="🏭 Lab_Overview")
+st.page_link("pages/3_🔬_Thematic_Overview.py", label="🔬_Thematic_Overview")
+st.page_link("pages/4_🔎_Thematic_Drilldown.py", label="🔎_Thematic_Drilldown")

@@ -1,6 +1,6 @@
 # lib/helpers.py
 """
-Shared helpers for Université de Lorraine bibliometric dashboard.
+Shared helpers for OVGU's bibliometric dashboard.
 Includes: taxonomy lookups, color palettes, blob parsers, utilities.
 
 View-specific table builders should remain in their respective view files.
@@ -8,7 +8,6 @@ View-specific table builders should remain in their respective view files.
 from __future__ import annotations
 
 import re
-from functools import lru_cache
 from typing import Dict, List, Tuple, Any
 
 import numpy as np

@@ -26,39 +26,31 @@ from lib.helpers import (
     get_subfield_id_to_name,
     get_subfield_id_to_domain_id,
     get_field_order_by_domain,
-    get_domain_color,
-    DOMAIN_NAMES_ORDERED,
-    safe_float,
     parse_pipe_float_list,
     render_domain_legend,
+)
+
+from lib.data_cache import (
+    load_thematic_overview,
+    load_treemap_hierarchy,
+    load_tm_labels,
 )
 
 # =============================================================================
 # Page config
 # =============================================================================
 st.set_page_config(
-    page_title="Thematic Overview | UL Bibliometrics",
+    page_title="Thematic Overview | OVGU Bibliometrics",
     page_icon="🔬",
     layout="wide",
 )
 
 st.title("🔬 Thematic Overview")
-st.markdown("Explore Université de Lorraine's research portfolio across domains, fields, subfields, and topics.")
+st.markdown("Explore OVGU's research portfolio across OpenAlex thematic taxonomies and bottom-up topics.")
 
 # =============================================================================
 # Load data
 # =============================================================================
-@st.cache_data
-def load_thematic_overview():
-    return pd.read_parquet("data/thematic_overview.parquet")
-
-@st.cache_data
-def load_treemap_hierarchy():
-    return pd.read_parquet("data/treemap_hierarchy.parquet")
-
-@st.cache_data
-def load_tm_labels():
-    return pd.read_parquet("data/TM_labels.parquet")
 
 df_overview = load_thematic_overview()
 df_treemap_raw = load_treemap_hierarchy()
