@@ -213,14 +213,14 @@ def build_openalex_copubs_url(partner_id, level, element_id):
     return base_url + ",".join(filters)
 
 def get_research_topic_keywords(topic_id):
-    """Get keywords for a research topic from TM_labels."""
+    """Get keywords for a topic from TM_labels."""
     if df_tm_labels.empty:
         return []
     try:
         topic_id_int = int(topic_id)
     except (ValueError, TypeError):
         return []
-    rt_labels = df_tm_labels[df_tm_labels["dimension"] == "research topic"]
+    rt_labels = df_tm_labels[df_tm_labels["dimension"] == "topic"]
     matching = rt_labels[rt_labels["topic_id"] == topic_id_int]
     if matching.empty:
         return []
@@ -252,12 +252,12 @@ col1, col2 = st.columns(2)
 with col1:
     level = st.selectbox(
         "Select level:",
-        ["domain", "field", "subfield", "research_topic"],
+        ["domain", "field", "subfield", "topic"],
         format_func=lambda x: {
             "domain": "🌐 Domain",
             "field": "📚 Field",
             "subfield": "📖 Subfield",
-            "research_topic": "🧬 Research Topic (Topic Model)",
+            "topic": "🧬 Research Topic (Topic Model)",
         }.get(x, x)
     )
 
@@ -286,7 +286,7 @@ level_label = LEVEL_LABELS.get(level, level.title())
 st.markdown(f"## {element_name}")
 
 # For research topics, show methodology info and keywords
-if level == "research_topic":
+if level == "topic":
     st.markdown("""
     <div style="background:#f8f9fa;padding:12px 16px;border-radius:8px;border-left:4px solid #6c757d;margin-bottom:16px;">
     <strong>📌 About this topic:</strong> Research topics are identified through a bottom-up approach: 
