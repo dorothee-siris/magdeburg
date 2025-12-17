@@ -220,8 +220,8 @@ def get_research_topic_keywords(topic_id):
         topic_id_int = int(topic_id)
     except (ValueError, TypeError):
         return []
-    rt_labels = df_tm_labels[df_tm_labels["dimension"] == "topic"]
-    matching = rt_labels[rt_labels["topic_id"] == topic_id_int]
+    
+    matching = df_tm_labels[df_tm_labels["topic_id"] == topic_id_int]
     if matching.empty:
         return []
     keywords_str = matching.iloc[0].get("keywords", "")
