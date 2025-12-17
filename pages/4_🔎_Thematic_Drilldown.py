@@ -22,7 +22,6 @@ from lib.helpers import (
 from lib.data_cache import (
     load_thematic_overview,
     load_thematic_sublevels,
-    load_thematic_contributions,
     load_thematic_partners,
     load_thematic_authors,
     load_tm_labels,
@@ -92,8 +91,12 @@ def format_pct(val):
 def format_cagr(val):
     if pd.isna(val):
         return "—"
-    arrow = "↑" if val > 0 else ("↓" if val < 0 else "→")
-    return f"{arrow} {val*100:+.1f}%"
+    try:
+        val = float(val)
+        arrow = "↑" if val > 0 else ("↓" if val < 0 else "→")
+        return f"{arrow} {val*100:+.1f}%"
+    except (ValueError, TypeError):
+        return "—"
 
 def format_si(val):
     """Format Specialization Index values."""
