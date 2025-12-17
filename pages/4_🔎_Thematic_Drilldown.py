@@ -55,6 +55,14 @@ CHILD_LEVEL_LABELS = {
     "subfield": "Topic",
 }
 
+# OpenAlex level mapping for URL construction
+OPENALEX_LEVEL_MAP = {
+    "domain": ("domain", "domains"),
+    "field": ("field", "fields"),
+    "subfield": ("subfield", "subfields"),
+    "research_topic": ("topic", "topics"),
+}
+
 STRUCTURE_TYPE_COLORS = {
     "lab": "#4e79a7",
     "experimental": "#f28e2b",
@@ -102,7 +110,19 @@ def format_si(val):
     """Format Specialization Index values."""
     if pd.isna(val):
         return "—"
-    return f"{val:.2f}"
+    try:
+        return f"{float(val):.2f}"
+    except (ValueError, TypeError):
+        return "—"
+
+def format_float(val, decimals=2):
+    """Format float values with specified decimals."""
+    if pd.isna(val):
+        return "—"
+    try:
+        return f"{float(val):.{decimals}f}"
+    except (ValueError, TypeError):
+        return "—"
 
 def parse_year_counts(blob):
     """Parse '2019:120|2020:135|...' into dict {year: count}."""
@@ -119,10 +139,7 @@ def parse_year_counts(blob):
     return result
 
 def parse_top_items(blob, expected_fields):
-    """
-    Parse pipe-separated items with colon-separated fields.
-    Handles fields with varying counts robustly.
-    """
+    """Parse pipe-separated items with colon-separated fields."""
     if pd.isna(blob) or not str(blob).strip():
         return []
     results = []
@@ -163,19 +180,6 @@ def get_sublevel_data(parent_level, parent_id):
     mask = (df_sublevels["parent_level"] == parent_level) & (df_sublevels["parent_id"] == str(parent_id))
     return df_sublevels[mask].copy()
 
-
-def find_column(row_or_df, pattern):
-    """Find column name containing a pattern (handles columns with format descriptions)."""
-    if hasattr(row_or_df, 'index'):
-        cols = row_or_df.index
-    else:
-        cols = row_or_df.columns
-    
-    for col in cols:
-        if pattern in col:
-            return col
-    return None
-
 def get_partner_data(level, element_id):
     """Get partner data."""
     mask = (df_partners["level"] == level) & (df_partners["id"] == str(element_id))
@@ -192,44 +196,43 @@ def get_author_data(level, element_id):
         return None
     return rows.iloc[0]
 
-def render_structure_type_legend():
-    """Render legend for structure types."""
-    items = ""
-    for stype, color in STRUCTURE_TYPE_COLORS.items():
-        items += (
-            f'<span style="display:inline-flex;align-items:center;margin-right:16px;">'
-            f'<span style="width:14px;height:14px;background:{color};border-radius:3px;margin-right:6px;"></span>'
-            f'{stype.title()}</span>'
-        )
-    st.markdown(f'<div style="margin:8px 0 16px 0;">{items}</div>', unsafe_allow_html=True)
+def build_openalex_copubs_url(partner_id, level, element_id):
+    """Build OpenAlex URL for co-publications with a partner."""
+    if level not in OPENALEX_LEVEL_MAP:
+        return None
+    level_singular, level_plural = OPENALEX_LEVEL_MAP[level]
+    base_url = "https://openalex.org/works?filter="
+    filters = [
+        "authorships.institutions.lineage:i95793202",
+        f"authorships.institutions.lineage:{partner_id}",
+        "publication_year:2020-2024",
+        "type:types/article|types/book-chapter|types/book|types/review|types/letter",
+        "has_doi:true",
+        f"primary_topic.{level_singular}.id:{level_plural}/{element_id}"
+    ]
+    return base_url + ",".join(filters)
 
 def get_research_topic_keywords(topic_id):
     """Get keywords for a research topic from TM_labels."""
     if df_tm_labels.empty:
         return []
-    
     try:
         topic_id_int = int(topic_id)
     except (ValueError, TypeError):
         return []
-    
     rt_labels = df_tm_labels[df_tm_labels["dimension"] == "research topic"]
     matching = rt_labels[rt_labels["topic_id"] == topic_id_int]
-    
     if matching.empty:
         return []
-    
     keywords_str = matching.iloc[0].get("keywords", "")
     if pd.isna(keywords_str) or not keywords_str:
         return []
-    
     return [kw.strip() for kw in str(keywords_str).split("|") if kw.strip()]
 
 def render_keywords_badges(keywords):
     """Render keywords as styled badges."""
     if not keywords:
         return
-    
     badges_html = ""
     for kw in keywords:
         badges_html += (
@@ -291,7 +294,6 @@ if level == "research_topic":
     then grouped into coherent clusters using k-means clustering.
     </div>
     """, unsafe_allow_html=True)
-    
     keywords = get_research_topic_keywords(element_id)
     if keywords:
         st.markdown("**Keywords:**")
@@ -309,38 +311,45 @@ with kpi_cols1[0]:
 with kpi_cols1[1]:
     st.metric("% of OVGU Total", format_pct(element_data.get('pubs_pct_of_um', element_data.get('pubs_pct_of_ul'))))
 with kpi_cols1[2]:
-    st.metric("CAGR 2020-24", format_cagr(element_data['cagr_2020_2024']))
+    st.metric("CAGR 2020-24", format_cagr(element_data.get('cagr_2020_2024', element_data.get('cagr_2019_2023'))))
 
 st.markdown("#### 🎯 Citation Impact")
 kpi_cols2 = st.columns(4)
 with kpi_cols2[0]:
-    fwci_median = element_data['fwci_median']
-    st.metric("Median FWCI", f"{fwci_median:.2f}" if pd.notna(fwci_median) else "—")
+    fwci_median = element_data.get('fwci_median')
+    st.metric("Median FWCI", format_float(fwci_median))
 with kpi_cols2[1]:
-    fwci_mean = element_data['fwci_mean']
-    st.metric("Avg. FWCI", f"{fwci_mean:.2f}" if pd.notna(fwci_mean) else "—")
-with kpi_cols2[2]:
-    st.metric("% Top 10%", format_pct(element_data['pct_top10']))
-with kpi_cols2[3]:
-    st.metric("% Top 1%", format_pct(element_data['pct_top1']))
+    fwci_mean = element_data.get('fwci_mean')
+    st.metric("Avg. FWCI", format_float(fwci_mean))
+
+# For fields: use PP_in_top_10_percent and PP_in_top_1_percent
+if level == "field":
+    with kpi_cols2[2]:
+        st.metric("PP Top 10%", format_pct(element_data.get('PP_in_top_10_percent')))
+    with kpi_cols2[3]:
+        st.metric("PP Top 1%", format_pct(element_data.get('PP_in_top_1_percent')))
+else:
+    with kpi_cols2[2]:
+        st.metric("% Top 10%", format_pct(element_data.get('pct_top10')))
+    with kpi_cols2[3]:
+        st.metric("% Top 1%", format_pct(element_data.get('pct_top1')))
 
 st.markdown("#### 🤝 Collaborations")
 kpi_cols3 = st.columns(4)
 with kpi_cols3[0]:
-    st.metric("🌍 % International", format_pct(element_data['pct_international']))
+    st.metric("🌍 % International", format_pct(element_data.get('pct_international')))
 with kpi_cols3[1]:
-    st.metric("🏢 % Company", format_pct(element_data['pct_company']))
+    st.metric("🏢 % Company", format_pct(element_data.get('pct_company')))
 
 st.markdown("#### 🌱 Challenge-oriented")
 kpi_cols4 = st.columns(4)
 with kpi_cols4[0]:
-    st.metric("% SDG-related", format_pct(element_data['pct_sdg']))
+    st.metric("% SDG-related", format_pct(element_data.get('pct_sdg')))
 
 # =============================================================================
 # Section 2b: Advanced Metrics (Domain & Field only)
 # =============================================================================
 if level in ["domain", "field"]:
-    # Check if advanced metrics exist and have values
     si_germany = element_data.get('si_germany')
     si_europe = element_data.get('si_europe')
     nci = element_data.get('nci')
@@ -353,35 +362,20 @@ if level in ["domain", "field"]:
         st.markdown("#### 📐 Specialization & Positioning")
         kpi_cols5 = st.columns(5)
         with kpi_cols5[0]:
-            st.metric(
-                "SI Germany", 
-                format_si(si_germany),
-                help="Specialization Index relative to Germany. >1 means OVGU is more specialized than the national average."
-            )
+            st.metric("SI Germany", format_si(si_germany),
+                help="Specialization Index relative to Germany. >1 means OVGU is more specialized than the national average.")
         with kpi_cols5[1]:
-            st.metric(
-                "SI Europe", 
-                format_si(si_europe),
-                help="Specialization Index relative to Europe. >1 means OVGU is more specialized than the European average."
-            )
+            st.metric("SI Europe", format_si(si_europe),
+                help="Specialization Index relative to Europe. >1 means OVGU is more specialized than the European average.")
         with kpi_cols5[2]:
-            st.metric(
-                "NCI", 
-                format_si(nci),
-                help="Normalized Citation Index (baseline: Europe, subfield-wise). >1 means above-average citation impact."
-            )
+            st.metric("NCI", format_si(nci),
+                help="Normalized Citation Index (baseline: Europe, subfield-wise). >1 means above-average citation impact.")
         with kpi_cols5[3]:
-            st.metric(
-                "Dominance Top 1%", 
-                format_si(dom_top1),
-                help="Dominance indicator for highly cited publications (top 1%)."
-            )
+            st.metric("Dominance Top 10%", format_si(dom_top10),
+                help="Dominance indicator for highly cited publications (top 10%).")
         with kpi_cols5[4]:
-            st.metric(
-                "Dominance Top 10%", 
-                format_si(dom_top10),
-                help="Dominance indicator for highly cited publications (top 10%)."
-            )
+            st.metric("Dominance Top 1%", format_si(dom_top1),
+                help="Dominance indicator for highly cited publications (top 1%).")
 
 # =============================================================================
 # Section 3: Sublevel Breakdown (for OA taxonomy only)
@@ -397,19 +391,34 @@ if level in ["domain", "field", "subfield"]:
     if not df_sub.empty:
         df_sub = df_sub.sort_values("pubs_total", ascending=False)
         
+        # Determine child level for conditional columns
+        child_level = {"domain": "field", "field": "subfield", "subfield": "topic"}.get(level)
+        is_field_breakdown = (level == "domain")  # Breaking down domain into fields
+        
         sub_table = []
         for _, row in df_sub.iterrows():
-            sub_table.append({
+            row_data = {
                 "Name": row["child_name"],
                 "Pubs": int(row["pubs_total"]),
                 f"{level_label} share": row["pubs_pct_of_parent"] * 100,
-                "% Top 10%": format_pct(row["pct_top10"]),
-                "% Top 1%": format_pct(row["pct_top1"]),
-                "% International": format_pct(row["pct_international"]),
-                "Median FWCI": f"{row['fwci_median']:.2f}" if pd.notna(row['fwci_median']) else "—",
-                "Avg. FWCI": f"{row['fwci_mean']:.2f}" if pd.notna(row['fwci_mean']) else "—",
-                "CAGR": format_cagr(row["cagr_2020_2024"]),
-            })
+                "% International": format_pct(row.get("pct_international")),
+                "% SDG": format_pct(row.get("pct_sdg")),
+                "Median FWCI": format_float(row.get('fwci_median')),
+                "Avg. FWCI": format_float(row.get('fwci_mean')),
+            }
+            
+            # Add field-specific metrics when breaking down domains into fields
+            if is_field_breakdown:
+                row_data["SI Germany"] = format_si(row.get("si_germany"))
+                row_data["SI Europe"] = format_si(row.get("si_europe"))
+                row_data["NCI"] = format_si(row.get("nci"))
+                row_data["PP Top 10%"] = format_pct(row.get("PP_in_top_10_percent"))
+                row_data["Dom. Top 10%"] = format_si(row.get("dominance_in_top_10_percent"))
+                row_data["PP Top 1%"] = format_pct(row.get("PP_in_top_1_percent"))
+                row_data["Dom. Top 1%"] = format_si(row.get("dominance_in_top_1_percent"))
+            
+            row_data["CAGR"] = format_cagr(row.get("cagr_2020_2024", row.get("cagr_2019_2023")))
+            sub_table.append(row_data)
         
         df_sub_display = pd.DataFrame(sub_table)
         st.dataframe(
@@ -457,22 +466,12 @@ if level in ["domain", "field", "subfield"]:
             
             st.markdown("**Absolute values**")
             fig_abs = px.line(
-                df_time_plot,
-                x="Year",
-                y="Count",
-                color="Name",
-                color_discrete_map=color_map,
-                markers=True,
+                df_time_plot, x="Year", y="Count", color="Name",
+                color_discrete_map=color_map, markers=True,
             )
             fig_abs.update_layout(
-                height=400,
-                margin=dict(t=30, l=50, r=30, b=50),
-                xaxis=dict(
-                    dtick=1,
-                    showgrid=True,
-                    gridcolor="lightgrey",
-                    gridwidth=0.5,
-                ),
+                height=400, margin=dict(t=30, l=50, r=30, b=50),
+                xaxis=dict(dtick=1, showgrid=True, gridcolor="lightgrey", gridwidth=0.5),
                 yaxis_title="Publications",
                 legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
             )
@@ -484,30 +483,17 @@ if level in ["domain", "field", "subfield"]:
             df_time_pct["Share"] = (df_time_pct["Count"] / year_totals * 100).fillna(0)
             
             fig_stack = px.area(
-                df_time_pct,
-                x="Year",
-                y="Share",
-                color="Name",
-                color_discrete_map=color_map,
-                groupnorm="percent",
+                df_time_pct, x="Year", y="Share", color="Name",
+                color_discrete_map=color_map, groupnorm="percent",
             )
-            fig_stack.update_traces(
-                hovertemplate="Year=%{x}<br>Share=%{y:.2f}%<extra>%{fullData.name}</extra>"
-            )
+            fig_stack.update_traces(hovertemplate="Year=%{x}<br>Share=%{y:.2f}%<extra>%{fullData.name}</extra>")
             fig_stack.update_layout(
-                height=400,
-                margin=dict(t=30, l=50, r=30, b=50),
-                xaxis=dict(
-                    dtick=1,
-                    showgrid=True,
-                    gridcolor="lightgrey",
-                    gridwidth=0.5,
-                ),
+                height=400, margin=dict(t=30, l=50, r=30, b=50),
+                xaxis=dict(dtick=1, showgrid=True, gridcolor="lightgrey", gridwidth=0.5),
                 yaxis=dict(title="Share (%)", range=[0, 100]),
                 legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
             )
             st.plotly_chart(fig_stack, use_container_width=True)
-
 
 # =============================================================================
 # Section 5: Partner Tables
@@ -520,7 +506,6 @@ partner_data = get_partner_data(level, element_id)
 if partner_data is not None:
     st.markdown("**Top 20 International Partners**")
     int_col = [c for c in df_partners.columns if "top_int_partners" in c][0]
-    # Format: id:name:country:type:copubs:share_um:share_int:share_partner:fwci (9 fields)
     int_items = parse_top_items(
         partner_data.get(int_col, ""),
         ["id", "name", "country", "type", "copubs", "share_um", "share_int", "share_partner", "fwci"]
@@ -532,14 +517,13 @@ if partner_data is not None:
         int_df["share_int"] = int_df["share_int"].apply(safe_float)
         int_df["share_partner"] = int_df["share_partner"].apply(safe_float)
         int_df["fwci"] = int_df["fwci"].apply(safe_float)
+        int_df["openalex_url"] = int_df["id"].apply(lambda x: build_openalex_copubs_url(x, level, element_id))
         
-        int_display = int_df[["name", "country", "type", "copubs", "share_um", "share_partner", "share_int", "fwci"]].copy()
+        int_display = int_df[["name", "country", "type", "copubs", "share_um", "share_partner", "share_int", "fwci", "openalex_url"]].copy()
         int_display.columns = [
             "Partner", "Country", "Type", "Co-pubs",
-            f"% of OVGU's {level_label}",
-            f"% of partner's {level_label}",
-            "% of collab.",
-            "Avg FWCI"
+            f"% of OVGU's {level_label}", f"% of partner's {level_label}",
+            "% of collab.", "Avg FWCI", "Copubs in OpenAlex"
         ]
         int_display[f"% of OVGU's {level_label}"] = int_display[f"% of OVGU's {level_label}"] * 100
         int_display["% of collab."] = int_display["% of collab."] * 100
@@ -547,29 +531,16 @@ if partner_data is not None:
         int_display["Avg FWCI"] = int_display["Avg FWCI"].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "—")
         
         st.dataframe(
-            int_display,
-            use_container_width=True,
-            hide_index=True,
+            int_display, use_container_width=True, hide_index=True,
             column_config={
                 f"% of OVGU's {level_label}": st.column_config.ProgressColumn(
-                    f"% of OVGU's {level_label}",
-                    min_value=0,
-                    max_value=100,
-                    format="%.1f%%",
-                ),
+                    f"% of OVGU's {level_label}", min_value=0, max_value=100, format="%.1f%%"),
                 "% of collab.": st.column_config.ProgressColumn(
-                    "% of collab.",
-                    min_value=0,
-                    max_value=100,
-                    format="%.1f%%",
-                    help="Share of all OVGU co-publications with this partner",
-                ),
+                    "% of collab.", min_value=0, max_value=100, format="%.1f%%",
+                    help="Share of all OVGU co-publications with this partner"),
                 f"% of partner's {level_label}": st.column_config.ProgressColumn(
-                    f"% of partner's {level_label}",
-                    min_value=0,
-                    max_value=100,
-                    format="%.1f%%",
-                ),
+                    f"% of partner's {level_label}", min_value=0, max_value=100, format="%.1f%%"),
+                "Copubs in OpenAlex": st.column_config.LinkColumn("Copubs in OpenAlex", display_text="🔗 View"),
             }
         )
     else:
@@ -577,7 +548,6 @@ if partner_data is not None:
     
     st.markdown("**Top 20 German Partners**")
     de_col = [c for c in df_partners.columns if "top_de_partners" in c][0]
-    # Format: id:name:type:copubs:share_level:share_int:share_partner:fwci (8 fields, no country)
     de_items = parse_top_items(
         partner_data.get(de_col, ""),
         ["id", "name", "type", "copubs", "share_um", "share_int", "share_partner", "fwci"]
@@ -589,14 +559,13 @@ if partner_data is not None:
         de_df["share_int"] = de_df["share_int"].apply(safe_float)
         de_df["share_partner"] = de_df["share_partner"].apply(safe_float)
         de_df["fwci"] = de_df["fwci"].apply(safe_float)
+        de_df["openalex_url"] = de_df["id"].apply(lambda x: build_openalex_copubs_url(x, level, element_id))
         
-        de_display = de_df[["name", "type", "copubs", "share_um", "share_partner", "share_int", "fwci"]].copy()
+        de_display = de_df[["name", "type", "copubs", "share_um", "share_partner", "share_int", "fwci", "openalex_url"]].copy()
         de_display.columns = [
             "Partner", "Type", "Co-pubs",
-            f"% of OVGU's {level_label}",
-            f"% of partner's {level_label}",
-            "% of collab.",
-            "Avg FWCI"
+            f"% of OVGU's {level_label}", f"% of partner's {level_label}",
+            "% of collab.", "Avg FWCI", "Copubs in OpenAlex"
         ]
         de_display[f"% of OVGU's {level_label}"] = de_display[f"% of OVGU's {level_label}"] * 100
         de_display["% of collab."] = de_display["% of collab."] * 100
@@ -604,29 +573,16 @@ if partner_data is not None:
         de_display["Avg FWCI"] = de_display["Avg FWCI"].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "—")
         
         st.dataframe(
-            de_display,
-            use_container_width=True,
-            hide_index=True,
+            de_display, use_container_width=True, hide_index=True,
             column_config={
                 f"% of OVGU's {level_label}": st.column_config.ProgressColumn(
-                    f"% of OVGU's {level_label}",
-                    min_value=0,
-                    max_value=100,
-                    format="%.1f%%",
-                ),
+                    f"% of OVGU's {level_label}", min_value=0, max_value=100, format="%.1f%%"),
                 "% of collab.": st.column_config.ProgressColumn(
-                    "% of collab.",
-                    min_value=0,
-                    max_value=100,
-                    format="%.1f%%",
-                    help="Share of all OVGU co-publications with this partner",
-                ),
+                    "% of collab.", min_value=0, max_value=100, format="%.1f%%",
+                    help="Share of all OVGU co-publications with this partner"),
                 f"% of partner's {level_label}": st.column_config.ProgressColumn(
-                    f"% of partner's {level_label}",
-                    min_value=0,
-                    max_value=100,
-                    format="%.1f%%",
-                ),
+                    f"% of partner's {level_label}", min_value=0, max_value=100, format="%.1f%%"),
+                "Copubs in OpenAlex": st.column_config.LinkColumn("Copubs in OpenAlex", display_text="🔗 View"),
             }
         )
     else:
@@ -652,7 +608,6 @@ if level in ["domain", "field", "subfield"] and partner_data is not None:
     """)
     
     recip_col = [c for c in df_partners.columns if "reciprocity_partners" in c][0]
-    # Format: id:name:country:type:copubs:share_um:share_int:share_partner:partner_total:fwci (10 fields)
     recip_items = parse_top_items(
         partner_data.get(recip_col, ""),
         ["id", "name", "country", "type", "copubs", "share_um", "share_int", "share_partner", "partner_total", "fwci"]
@@ -667,14 +622,11 @@ if level in ["domain", "field", "subfield"] and partner_data is not None:
         recip_df["partner_total"] = recip_df["partner_total"].apply(safe_int)
         recip_df["fwci"] = recip_df["fwci"].apply(safe_float)
         
-        # Filter out rows with no meaningful data
         recip_df = recip_df[(recip_df["share_um"] > 0) | (recip_df["share_partner"] > 0)]
         recip_df = recip_df[recip_df["partner_total"] > 0]
         
-        # Outlier toggle
         remove_outliers = st.checkbox(
-            "Remove outliers (partner share > 100%)",
-            value=False,
+            "Remove outliers (partner share > 100%)", value=False,
             help="Some partners may show >100% share due to data artifacts. Toggle to exclude them."
         )
         if remove_outliers:
@@ -682,13 +634,7 @@ if level in ["domain", "field", "subfield"] and partner_data is not None:
         
         if not recip_df.empty:
             max_partners = min(50, len(recip_df))
-            n_partners = st.slider(
-                "Number of partners to display:",
-                min_value=5,
-                max_value=max_partners,
-                value=min(30, max_partners),
-            )
-            
+            n_partners = st.slider("Number of partners to display:", min_value=5, max_value=max_partners, value=min(30, max_partners))
             recip_df = recip_df.nlargest(n_partners, "copubs")
             
             def geo_category(country):
@@ -701,17 +647,8 @@ if level in ["domain", "field", "subfield"] and partner_data is not None:
             recip_df["geo"] = recip_df["country"].apply(geo_category)
             
             fig_recip = px.scatter(
-                recip_df,
-                x="share_partner",
-                y="share_um",
-                size="partner_total",
-                size_max=40,
-                color="geo",
-                color_discrete_map={
-                    "Germany": "blue",
-                    "International": "red",
-                    "No country": "#888888",
-                },
+                recip_df, x="share_partner", y="share_um", size="partner_total", size_max=40,
+                color="geo", color_discrete_map={"Germany": "blue", "International": "red", "No country": "#888888"},
                 hover_name="name",
                 custom_data=["country", "type", "copubs", "share_um", "share_int", "share_partner", "partner_total", "fwci"],
             )
@@ -732,41 +669,24 @@ if level in ["domain", "field", "subfield"] and partner_data is not None:
             )
             
             max_val = max(recip_df["share_um"].max(), recip_df["share_partner"].max()) * 1.1
-            fig_recip.add_shape(
-                type="line",
-                x0=0, y0=0,
-                x1=max_val, y1=max_val,
-                line=dict(color="gray", dash="dash"),
-            )
+            fig_recip.add_shape(type="line", x0=0, y0=0, x1=max_val, y1=max_val, line=dict(color="gray", dash="dash"))
             
             fig_recip.update_layout(
-                height=550,
-                margin=dict(t=30, l=50, r=30, b=50),
-                xaxis=dict(
-                    title=f"Share of partner's {element_name} output",
-                    tickformat=".0%",
-                    range=[0, max_val],
-                ),
-                yaxis=dict(
-                    title=f"Share of OVGU's {element_name} output",
-                    tickformat=".0%",
-                    range=[0, max_val],
-                ),
+                height=550, margin=dict(t=30, l=50, r=30, b=50),
+                xaxis=dict(title=f"Share of partner's {element_name} output", tickformat=".0%", range=[0, max_val]),
+                yaxis=dict(title=f"Share of OVGU's {element_name} output", tickformat=".0%", range=[0, max_val]),
                 showlegend=False,
             )
             
             st.markdown(
-                """
-                <div style="margin-bottom: 0.5rem;">
-                  <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background-color:blue;margin-right:4px;"></span>
-                  <span style="margin-right:12px;">Germany</span>
-                  <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background-color:red;margin-right:4px;"></span>
-                  <span style="margin-right:12px;">International</span>
-                </div>
-                """,
+                '<div style="margin-bottom: 0.5rem;">'
+                '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background-color:blue;margin-right:4px;"></span>'
+                '<span style="margin-right:12px;">Germany</span>'
+                '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background-color:red;margin-right:4px;"></span>'
+                '<span style="margin-right:12px;">International</span>'
+                '</div>',
                 unsafe_allow_html=True,
             )
-            
             st.plotly_chart(fig_recip, use_container_width=True)
         else:
             st.info("No reciprocity data available for this element.")
@@ -793,18 +713,15 @@ if author_data is not None:
         auth_df["pubs"] = auth_df["pubs"].apply(safe_int)
         auth_df["pct"] = auth_df["pct"].apply(safe_float)
         auth_df["fwci"] = auth_df["fwci"].apply(safe_float)
-        auth_df["is_magdeburg"] = auth_df["is_magdeburg"].apply(lambda x: str(x).lower() == "true")
         auth_df["name"] = auth_df["name"].apply(add_spaces_to_name)
         
         fwci_col_name = f"Avg. FWCI in {level_label}"
         share_col_name = f"{level_label} share"
         
-        auth_display = auth_df[["name", "orcid", "pubs", "pct", "fwci", "is_magdeburg", "labs"]].copy()
-        auth_display.columns = ["Author", "ORCID", "Pubs", share_col_name, fwci_col_name, "OVGU Affiliation", "Labs"]
+        auth_display = auth_df[["name", "orcid", "pubs", "pct", "fwci"]].copy()
+        auth_display.columns = ["Author", "ORCID", "Pubs", share_col_name, fwci_col_name]
         auth_display[share_col_name] = auth_display[share_col_name].apply(lambda x: f"{x*100:.1f}%" if pd.notna(x) else "—")
         auth_display[fwci_col_name] = auth_display[fwci_col_name].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "—")
-        auth_display["OVGU Affiliation"] = auth_display["OVGU Affiliation"].apply(lambda x: "✅" if x else "")
-        auth_display["Labs"] = auth_display["Labs"].apply(lambda x: x.replace("/", " | ") if x else "")
         
         st.dataframe(auth_display, use_container_width=True, hide_index=True, height=500)
     else:
