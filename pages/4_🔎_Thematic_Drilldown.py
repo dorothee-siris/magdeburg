@@ -67,7 +67,6 @@ STRUCTURE_TYPE_COLORS = {
 # =============================================================================
 df_overview = load_thematic_overview()
 df_sublevels = load_thematic_sublevels()
-df_contributions = load_thematic_contributions()
 df_partners = load_thematic_partners()
 df_authors = load_thematic_authors()
 df_tm_labels = load_tm_labels()
@@ -158,13 +157,6 @@ def get_sublevel_data(parent_level, parent_id):
     mask = (df_sublevels["parent_level"] == parent_level) & (df_sublevels["parent_id"] == str(parent_id))
     return df_sublevels[mask].copy()
 
-def get_contribution_data(level, element_id):
-    """Get contribution data (research topics, depts, labs)."""
-    mask = (df_contributions["level"] == level) & (df_contributions["id"] == str(element_id))
-    rows = df_contributions[mask]
-    if rows.empty:
-        return None
-    return rows.iloc[0]
 
 def find_column(row_or_df, pattern):
     """Find column name containing a pattern (handles columns with format descriptions)."""
