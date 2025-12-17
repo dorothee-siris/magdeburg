@@ -115,6 +115,15 @@ def format_si(val):
     except (ValueError, TypeError):
         return "—"
 
+def format_dominance(val):
+    """Format Dominance values (multiply by 100, 4 decimals)."""
+    if pd.isna(val):
+        return "—"
+    try:
+        return f"{float(val)*100:.4f}%"
+    except (ValueError, TypeError):
+        return "—"
+
 def format_float(val, decimals=2):
     """Format float values with specified decimals."""
     if pd.isna(val):
@@ -207,12 +216,11 @@ def build_openalex_copubs_url(partner_id, level, element_id):
         f"authorships.institutions.lineage:{partner_id}",
         "publication_year:2020-2024",
         "type:types/article|types/book-chapter|types/book|types/review|types/letter",
-        "has_doi:true",
         f"primary_topic.{level_singular}.id:{level_plural}/{element_id}"
     ]
     return base_url + ",".join(filters)
 
-def get_research_topic_keywords(topic_id):
+def get_topic_keywords(topic_id):
     """Get keywords for a topic from TM_labels."""
     if df_tm_labels.empty:
         return []
@@ -257,7 +265,7 @@ with col1:
             "domain": "🌐 Domain",
             "field": "📚 Field",
             "subfield": "📖 Subfield",
-            "topic": "🧬 Research Topic (Topic Model)",
+            "topic": "🧬 Topic (Bottom-Up)",
         }.get(x, x)
     )
 
@@ -294,7 +302,7 @@ if level == "topic":
     then grouped into coherent clusters using k-means clustering.
     </div>
     """, unsafe_allow_html=True)
-    keywords = get_research_topic_keywords(element_id)
+    keywords = get_topic_keywords(element_id)
     if keywords:
         st.markdown("**Keywords:**")
         render_keywords_badges(keywords)
@@ -328,11 +336,6 @@ if level == "field":
         st.metric("PP Top 10%", format_pct(element_data.get('PP_in_top_10_percent')))
     with kpi_cols2[3]:
         st.metric("PP Top 1%", format_pct(element_data.get('PP_in_top_1_percent')))
-else:
-    with kpi_cols2[2]:
-        st.metric("% Top 10%", format_pct(element_data.get('pct_top10')))
-    with kpi_cols2[3]:
-        st.metric("% Top 1%", format_pct(element_data.get('pct_top1')))
 
 st.markdown("#### 🤝 Collaborations")
 kpi_cols3 = st.columns(4)
@@ -371,10 +374,10 @@ if level in ["domain", "field"]:
             st.metric("NCI", format_si(nci),
                 help="Normalized Citation Index (baseline: Europe, subfield-wise). >1 means above-average citation impact.")
         with kpi_cols5[3]:
-            st.metric("Dominance Top 10%", format_si(dom_top10),
+            st.metric("Dominance Top 10%", format_dominance(dom_top10),
                 help="Dominance indicator for highly cited publications (top 10%).")
         with kpi_cols5[4]:
-            st.metric("Dominance Top 1%", format_si(dom_top1),
+            st.metric("Dominance Top 1%", format_dominance(dom_top1),
                 help="Dominance indicator for highly cited publications (top 1%).")
 
 # =============================================================================
@@ -409,13 +412,26 @@ if level in ["domain", "field", "subfield"]:
             
             # Add field-specific metrics when breaking down domains into fields
             if is_field_breakdown:
-                row_data["SI Germany"] = format_si(row.get("si_germany"))
-                row_data["SI Europe"] = format_si(row.get("si_europe"))
-                row_data["NCI"] = format_si(row.get("nci"))
-                row_data["PP Top 10%"] = format_pct(row.get("PP_in_top_10_percent"))
-                row_data["Dom. Top 10%"] = format_si(row.get("dominance_in_top_10_percent"))
-                row_data["PP Top 1%"] = format_pct(row.get("PP_in_top_1_percent"))
-                row_data["Dom. Top 1%"] = format_si(row.get("dominance_in_top_1_percent"))
+                # Fetch field-level metrics from df_overview since they're not in sublevels
+                field_id = str(row["child_id"])
+                field_data = df_overview[(df_overview["level"] == "field") & (df_overview["id"] == field_id)]
+                if not field_data.empty:
+                    fd = field_data.iloc[0]
+                    row_data["SI Germany"] = format_si(fd.get("si_germany"))
+                    row_data["SI Europe"] = format_si(fd.get("si_europe"))
+                    row_data["NCI"] = format_si(fd.get("nci"))
+                    row_data["PP Top 10%"] = format_pct(fd.get("PP_in_top_10_percent"))
+                    row_data["Dom. Top 10%"] = format_dominance(fd.get("dominance_in_top_10_percent"))
+                    row_data["PP Top 1%"] = format_pct(fd.get("PP_in_top_1_percent"))
+                    row_data["Dom. Top 1%"] = format_dominance(fd.get("dominance_in_top_1_percent"))
+                else:
+                    row_data["SI Germany"] = "—"
+                    row_data["SI Europe"] = "—"
+                    row_data["NCI"] = "—"
+                    row_data["PP Top 10%"] = "—"
+                    row_data["Dom. Top 10%"] = "—"
+                    row_data["PP Top 1%"] = "—"
+                    row_data["Dom. Top 1%"] = "—"
             
             row_data["CAGR"] = format_cagr(row.get("cagr_2020_2024", row.get("cagr_2019_2023")))
             sub_table.append(row_data)
