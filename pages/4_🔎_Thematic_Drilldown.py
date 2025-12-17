@@ -306,7 +306,7 @@ with kpi_cols1[0]:
 with kpi_cols1[1]:
     st.metric("% of OVGU Total", format_pct(element_data.get('pubs_pct_of_um', element_data.get('pubs_pct_of_ul'))))
 with kpi_cols1[2]:
-    st.metric("CAGR 2019-23", format_cagr(element_data['cagr_2019_2023']))
+    st.metric("CAGR 2020-24", format_cagr(element_data['cagr_2020_2024']))
 
 st.markdown("#### 🎯 Citation Impact")
 kpi_cols2 = st.columns(4)
@@ -405,7 +405,7 @@ if level in ["domain", "field", "subfield"]:
                 "% International": format_pct(row["pct_international"]),
                 "Median FWCI": f"{row['fwci_median']:.2f}" if pd.notna(row['fwci_median']) else "—",
                 "Avg. FWCI": f"{row['fwci_mean']:.2f}" if pd.notna(row['fwci_mean']) else "—",
-                "CAGR": format_cagr(row["cagr_2019_2023"]),
+                "CAGR": format_cagr(row["cagr_2020_2024"]),
             })
         
         df_sub_display = pd.DataFrame(sub_table)
@@ -813,4 +813,4 @@ else:
 # Footer
 # =============================================================================
 st.markdown("---")
-st.caption("Data: Otto-von-Guericke-Universität Magdeburg publications 2019-2023 | OpenAlex + custom topic modeling")
+st.caption("Data: Otto-von-Guericke-Universität Magdeburg publications 2020-2024 | OpenAlex + custom topic modeling")
