@@ -84,7 +84,10 @@ subfield_id2domain = get_subfield_id_to_domain_id()
 def format_pct(val):
     if pd.isna(val):
         return "—"
-    return f"{val*100:.1f}%"
+    try:
+        return f"{float(val)*100:.1f}%"
+    except (ValueError, TypeError):
+        return "—"
 
 def format_cagr(val):
     if pd.isna(val):
