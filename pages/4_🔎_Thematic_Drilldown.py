@@ -37,7 +37,7 @@ st.set_page_config(
 )
 
 st.title("🔎 Thematic Drill-Down")
-st.markdown("Explore detailed metrics for a specific domain, field, subfield, or research topic.")
+st.markdown("Explore detailed metrics for a specific domain, field, subfield, or topic (bottom-up).")
 
 # =============================================================================
 # Constants
@@ -46,7 +46,7 @@ LEVEL_LABELS = {
     "domain": "Domain",
     "field": "Field",
     "subfield": "Subfield",
-    "research_topic": "Research Topic",
+    "tm_topic": "Topic",
 }
 
 CHILD_LEVEL_LABELS = {
@@ -60,7 +60,6 @@ OPENALEX_LEVEL_MAP = {
     "domain": ("domain", "domains"),
     "field": ("field", "fields"),
     "subfield": ("subfield", "subfields"),
-    "research_topic": ("topic", "topics"),
 }
 
 STRUCTURE_TYPE_COLORS = {
@@ -260,12 +259,12 @@ col1, col2 = st.columns(2)
 with col1:
     level = st.selectbox(
         "Select level:",
-        ["domain", "field", "subfield", "topic"],
+        ["domain", "field", "subfield", "tm_topic"],
         format_func=lambda x: {
             "domain": "🌐 Domain",
             "field": "📚 Field",
             "subfield": "📖 Subfield",
-            "topic": "🧬 Topic (Bottom-Up)",
+            "tm_topic": "🧬 Topic (Topic Modeling)",
         }.get(x, x)
     )
 
@@ -329,12 +328,13 @@ elif level == "subfield":
                 st.markdown(f"**Field:** {parent_field_name}")
 
 # For research topics, show methodology info and keywords
-if level == "topic":
+if level == "tm_topic":
     st.markdown("""
     <div style="background:#f8f9fa;padding:12px 16px;border-radius:8px;border-left:4px solid #6c757d;margin-bottom:16px;">
-    <strong>📌 About this topic:</strong> Research topics are identified through a bottom-up approach: 
-    key themes are extracted from publication abstracts using a Large Language Model, 
-    then grouped into coherent clusters using k-means clustering.
+    <strong>📌 About this topic:</strong> Topics were identified through a bottom-up approach, 
+                extracting themes from publication abstracts using BERTopic and clustering them into coherent groups with k-means. 
+                Compared to the OpenAlex taxonomy, this approach better captures cross-disciplinary linkages
+                and emerging research themes that are difficult to classify using predefined taxonomies.
     </div>
     """, unsafe_allow_html=True)
     keywords = get_topic_keywords(element_id)
