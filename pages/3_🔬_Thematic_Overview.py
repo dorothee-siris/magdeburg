@@ -352,11 +352,20 @@ st.dataframe(
     height=500,
 )
 
-# FWCI Distribution boxplots
+# =============================================================================
+# FWCI Distribution by Field
+# =============================================================================
 st.markdown("### FWCI Distribution by Field")
+
+st.markdown("""
+This chart shows the distribution of Field-Weighted Citation Impact (FWCI) across fields.
+By default, extreme values are hidden (showing percentiles 10-90) to facilitate comparison between fields.
+Toggle the option below to include the full range (min to max).
+""")
 
 use_extreme_fields = st.toggle("Include extreme values (p0, p100)", value=False, key="field_extreme")
 
+# Sort by domain order for boxplot
 field_order = get_field_order_by_domain()
 df_fields_sorted = df_fields.copy()
 df_fields_sorted["sort_order"] = df_fields_sorted["field_id"].map({fid: i for i, fid in enumerate(field_order)})
@@ -364,7 +373,7 @@ df_fields_sorted = df_fields_sorted.sort_values("sort_order")
 
 boxplot_data_fields = []
 for _, row in df_fields_sorted.iterrows():
-    bp = parse_fwci_boxplot(row.get("fwci_boxplot"))
+    bp = parse_fwci_boxplot(row["fwci_boxplot"])
     if bp and row["pubs_total"] > 0:
         field_id = row["field_id"]
         dom_id = field_id2domain.get(field_id, 0)
@@ -383,8 +392,10 @@ if boxplot_data_fields:
     for item in boxplot_data_fields:
         if use_extreme_fields:
             lower, upper = item["p0"], item["p100"]
+            range_label = "min-max"
         else:
             lower, upper = item["p10"], item["p90"]
+            range_label = "p10-p90"
         
         fig_box_fields.add_trace(go.Box(
             x=[item["field"]],
@@ -399,25 +410,43 @@ if boxplot_data_fields:
             boxpoints=False,
             name=item["field"],
             showlegend=False,
+            hoverinfo="text",
+            hovertext=(
+                f"<b>{item['field']}</b><br>"
+                f"Publications: {item['count']:,}<br>"
+                f"Median (p50): {item['p50']:.2f}<br>"
+                f"Q1 (p25): {item['p25']:.2f}<br>"
+                f"Q3 (p75): {item['p75']:.2f}<br>"
+                f"Range ({range_label}): {lower:.2f} – {upper:.2f}"
+            ),
         ))
     
+    # Add count annotations (straight orientation, no "n=" prefix)
     for i, item in enumerate(boxplot_data_fields):
         fig_box_fields.add_annotation(
             x=item["field"],
-            y=-0.12,
+            y=-0.08,
             yref="paper",
-            text=f"n={item['count']:,}",
+            text=f"{item['count']:,}",
             showarrow=False,
             font=dict(size=9, color="#666"),
-            textangle=-45,
+            textangle=0,
         )
     
     fig_box_fields.update_layout(
-        height=450,
-        margin=dict(t=30, l=50, r=30, b=120),
+        height=500,
+        margin=dict(t=30, l=50, r=30, b=160),
         yaxis_title="FWCI",
         xaxis_title="",
         xaxis_tickangle=-45,
+        xaxis=dict(
+            tickfont=dict(size=10),
+        ),
+        hoverlabel=dict(
+            bgcolor="white",
+            font_size=12,
+            font_family="Arial",
+        ),
     )
     st.plotly_chart(fig_box_fields, use_container_width=True)
 
