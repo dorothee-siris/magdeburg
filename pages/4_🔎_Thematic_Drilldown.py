@@ -272,6 +272,18 @@ with col1:
 with col2:
     element_options = get_element_options(level)
     if element_options:
+        # For subfield level, add a search filter due to large number of options
+        if level == "subfield":
+            search_term = st.text_input("Search subfield:", "", key="subfield_search_drilldown")
+            if search_term:
+                element_options = [
+                    (eid, label) for eid, label in element_options 
+                    if search_term.lower() in label.lower()
+                ]
+            if not element_options:
+                st.warning("No subfields match your search.")
+                st.stop()
+        
         element_id = st.selectbox(
             "Select element:",
             options=[opt[0] for opt in element_options],

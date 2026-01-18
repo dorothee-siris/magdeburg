@@ -209,6 +209,11 @@ st.plotly_chart(fig_treemap, use_container_width=True)
 # =============================================================================
 st.markdown("---")
 st.markdown("## 🌐 Domains")
+st.markdown("""
+Domains represent the highest level of thematic classification in OpenAlex. 
+All research output is distributed across four broad domains: Life Sciences, Social Sciences, Physical Sciences, and Health Sciences.
+""")
+
 render_domain_legend()
 
 df_domains = df_overview[df_overview["level"] == "domain"].copy()
@@ -304,6 +309,10 @@ if boxplot_data:
 # =============================================================================
 st.markdown("---")
 st.markdown("## 📚 Fields")
+st.markdown("""
+Fields are the second level of the OpenAlex taxonomy, grouping related disciplines within each domain. 
+This view highlights the institution's disciplinary strengths and citation performance across 26 fields.
+""")
 render_domain_legend()
 
 df_fields = df_overview[df_overview["level"] == "field"].copy()
@@ -417,6 +426,10 @@ if boxplot_data_fields:
 # =============================================================================
 st.markdown("---")
 st.markdown("## 📖 Subfields")
+st.markdown("""
+Subfields provide finer granularity, breaking down each field into more specific research areas. 
+Use the filters below to explore subfields by domain or search for specific topics.
+""")
 render_domain_legend()
 
 df_subfields = df_overview[df_overview["level"] == "subfield"].copy()
@@ -475,6 +488,10 @@ st.caption(f"Showing {len(subfield_table)} subfields")
 # =============================================================================
 st.markdown("---")
 st.markdown("## 🏷️ Topics (OpenAlex)")
+st.markdown("""
+Topics are the most granular level of the OpenAlex taxonomy, representing specific research areas within subfields.
+Each publication is assigned to a single primary topic based on its content. Use the filters to explore the top 200 topics by volume.
+""")
 render_domain_legend()
 
 df_topics = df_overview[df_overview["level"] == "oa_topic"].copy()
@@ -533,10 +550,11 @@ st.caption(f"Showing top {len(topic_table)} topics by volume")
 # =============================================================================
 st.markdown("---")
 st.markdown("## 🧬 Topics (Topic Modeling)")
-
 st.markdown("""
-These topics were identified through bottom-up clustering of research abstracts using LLM-based extraction.
-They reveal thematic patterns that may cut across traditional disciplinary boundaries.
+These topics were identified through a bottom-up approach: key themes were extracted from publication abstracts 
+using a deep learning–based topic modelling method (BERTopic) and subsequently grouped into coherent clusters using k-means. 
+Unlike the OpenAlex taxonomy, this data-driven approach makes it possible to identify cross-disciplinary patterns
+and emerging research themes that may not be captured by traditional, predefined classification schemes.
 """)
 
 df_research = df_overview[df_overview["level"] == "tm_topic"].copy()
@@ -572,6 +590,7 @@ st.markdown("### Topics × Domains Heatmap")
 st.markdown("""
 This heatmap shows how each topic distributes across the four scientific domains.
 Darker cells indicate higher publication counts. Topics spanning multiple domains reveal interdisciplinary research.
+Toggle normalization to see the relative distribution within each topic rather than absolute counts.
 """)
 
 heatmap_data = []
