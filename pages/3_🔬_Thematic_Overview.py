@@ -425,7 +425,7 @@ if boxplot_data_fields:
     for i, item in enumerate(boxplot_data_fields):
         fig_box_fields.add_annotation(
             x=item["field"],
-            y=-0.08,
+            y=-0.01,
             yref="paper",
             text=f"{item['count']:,}",
             showarrow=False,
