@@ -408,17 +408,8 @@ if boxplot_data_fields:
             fillcolor=item["color"],
             line=dict(color=item["color"]),
             boxpoints=False,
-            name=item["field"],
+            name=f"{item['field']} (n={item['count']:,})",
             showlegend=False,
-            hoverinfo="text",
-            hovertext=(
-                f"<b>{item['field']}</b><br>"
-                f"Publications: {item['count']:,}<br>"
-                f"Median (p50): {item['p50']:.2f}<br>"
-                f"Q1 (p25): {item['p25']:.2f}<br>"
-                f"Q3 (p75): {item['p75']:.2f}<br>"
-                f"Range ({range_label}): {lower:.2f} – {upper:.2f}"
-            ),
         ))
     
     # Add count annotations (straight orientation, no "n=" prefix)

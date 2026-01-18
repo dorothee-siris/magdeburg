@@ -305,6 +305,29 @@ level_label = LEVEL_LABELS.get(level, level.title())
 # Display element name as header
 st.markdown(f"## {element_name}")
 
+# Show hierarchy for fields and subfields
+if level == "field":
+    parent_domain = element_data.get('parent_name', '')
+    if parent_domain:
+        st.markdown(f"**Domain:** {parent_domain}")
+
+elif level == "subfield":
+    parent_field_id = element_data.get('parent_id')
+    parent_field_name = element_data.get('parent_name', '')
+    # Look up the domain from the field
+    if parent_field_id:
+        try:
+            field_id_int = int(parent_field_id)
+            domain_id = field_id2domain.get(field_id_int)
+            domain_name = domain_id2name.get(domain_id, '')
+            if parent_field_name and domain_name:
+                st.markdown(f"**Field:** {parent_field_name} · **Domain:** {domain_name}")
+            elif parent_field_name:
+                st.markdown(f"**Field:** {parent_field_name}")
+        except (ValueError, TypeError):
+            if parent_field_name:
+                st.markdown(f"**Field:** {parent_field_name}")
+
 # For research topics, show methodology info and keywords
 if level == "topic":
     st.markdown("""
