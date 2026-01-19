@@ -203,7 +203,8 @@ fig_treemap.update_layout(
 )
 
 fig_treemap.update_traces(
-    maxdepth=2,  # Show only 2 levels at a time (current + one level of children)
+    maxdepth=3,  # Show only 2 levels at a time (current + one level of children)
+    tiling=dict(pad=0),
 )
 
 st.plotly_chart(fig_treemap, use_container_width=True)
