@@ -184,6 +184,8 @@ else:
         color_continuous_scale="Blues",
     )
 
+fig_treemap.update_traces(branchvalues="total")
+
 # Update hover template
 fig_treemap.update_traces(
     customdata=np.stack([
