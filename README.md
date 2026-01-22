@@ -1,11 +1,10 @@
-# Université de Lorraine - Laboratory Analysis Dashboard
+# Otto-von-Guericke-Universität Magdeburg
 
-A Streamlit application for bibliometric analysis and visualization of research laboratory data at Université de Lorraine.
+A Streamlit application for bibliometric analysis and visualization of research laboratory data at OVGU.
 
 ## Features
-- Laboratory performance metrics and KPIs
-- Research field and domain distribution analysis
-- Partnership and collaboration networks
+- Thematic distribution analysis (OpenAlex top-down classifications and bottom-um Topic Modeling)
+- Top partners and authors
 - Interactive visualizations using Plotly
 
 ## Installation
