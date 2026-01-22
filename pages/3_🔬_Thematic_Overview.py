@@ -202,7 +202,7 @@ if color_metric == "si":
             df_plot["si_europe"],
             df_plot["fwci_median"],
             df_plot["pct_international"] * 100,
-            df_plot["cagr"] * 100,
+            np.round(df_plot["cagr"] * 100, 1),
         ], axis=-1),
         hovertemplate="<b>%{label}</b><br>" +
                       "Publications: %{customdata[0]:,}<br>" +
@@ -265,7 +265,7 @@ else:
             df_plot["pubs"],
             df_plot["fwci_median"],
             df_plot["pct_international"] * 100,
-            df_plot["cagr"] * 100,
+            np.round(df_plot["cagr"] * 100, 1),
         ], axis=-1),
         hovertemplate="<b>%{label}</b><br>" +
                       "Publications: %{customdata[0]:,}<br>" +
