@@ -139,48 +139,88 @@ def parse_pubs_per_domain(blob):
 st.markdown("---")
 st.markdown("## 📊 Research Portfolio Treemap")
 
+st.markdown("""
+**How to read this chart**: Each rectangle represents a thematic area. **Size reflects publication volume.**
+Click to drill down from domains → fields → subfields. Use the breadcrumb trail to navigate back.
+
+**Color options:**
+- **Median FWCI**, **% International**, and **CAGR** are calculated at the publication level and aggregated across all hierarchy levels (domain, field, subfield).
+- **Specialization Index (SI)** is calculated only at the field level, comparing OVGU's publication share against national (Germany) or European averages. SI > 1 means OVGU is more specialized than the baseline. When selected, only fields are displayed.
+""")
+
 # Prepare treemap data
 df_treemap = df_treemap_raw.copy()
 df_treemap_fields = df_treemap[df_treemap["level"] == "field"].copy()
 
-# Treemap mode selector
-treemap_mode = st.radio(
-    "Select visualization mode:",
-    ["hierarchical", "specialization"],
+# Color metric selector
+color_metric = st.selectbox(
+    "Color by:",
+    ["fwci_median", "pct_international", "cagr", "si"],
     format_func=lambda x: {
-        "hierarchical": "📊 Hierarchical (Domain → Field → Subfield)",
-        "specialization": "🎯 Specialization Index (Fields only)",
+        "fwci_median": "Median FWCI (citation impact) — All levels",
+        "pct_international": "% International collaborations — All levels",
+        "cagr": "CAGR 2020-24 (growth rate) — All levels",
+        "si": "Specialization Index — Fields only",
     }.get(x, x),
-    horizontal=True,
+    key="treemap_color"
 )
 
-if treemap_mode == "hierarchical":
-    # =========================================================================
-    # HIERARCHICAL MODE: Domain → Field → Subfield
-    # =========================================================================
-    st.markdown("""
-    **How to read this chart**: Each rectangle represents a thematic area. **Size reflects publication volume.**
-    Click to drill down from domains → fields → subfields. Use the breadcrumb trail to navigate back.
+# SI baseline toggle (only shown when SI is selected)
+if color_metric == "si":
+    si_baseline = st.toggle("Use European baseline (default: Germany)", value=False, key="si_baseline_toggle")
+    si_col = "si_europe" if si_baseline else "si_germany"
+    si_label = "SI Europe" if si_baseline else "SI Germany"
     
-    Color options below are calculated at the publication level and can be aggregated to any hierarchy level.
-    """)
+    # Filter to fields only with valid SI
+    df_plot = df_treemap_fields[df_treemap_fields[si_col].notna() & (df_treemap_fields[si_col] > 0)].copy()
     
-    # Color metric selector for hierarchical mode
-    color_metric = st.selectbox(
-        "Color by:",
-        ["fwci_median", "pct_international", "cagr"],
-        format_func=lambda x: {
-            "fwci_median": "Median FWCI (citation impact)",
-            "pct_international": "% International collaborations",
-            "cagr": "CAGR 2020-24 (growth rate)",
-        }.get(x, x),
-        key="treemap_color_hierarchical"
+    if df_plot.empty:
+        st.warning("No Specialization Index data available.")
+        st.stop()
+    
+    # SI treemap: flat structure (fields only), colored by SI value
+    fig_treemap = px.treemap(
+        df_plot,
+        ids="id",
+        names="name",
+        parents=[""]*len(df_plot),  # Flat structure, no parents
+        values="pubs",
+        color=si_col,
+        color_continuous_scale=[
+            [0.0, "#EC8773"],    # Red for low SI
+            [0.5, "#F4D570"],    # Yellow for SI = 1
+            [1.0, "#60CCAA"],    # Green for high SI
+        ],
+        range_color=[0, 2],
     )
     
-    # Build treemap based on color metric
+    # Hover template for SI
+    fig_treemap.update_traces(
+        customdata=np.stack([
+            df_plot["pubs"],
+            df_plot["si_germany"],
+            df_plot["si_europe"],
+            df_plot["fwci_median"],
+            df_plot["pct_international"] * 100,
+            df_plot["cagr"] * 100,
+        ], axis=-1),
+        hovertemplate="<b>%{label}</b><br>" +
+                      "Publications: %{customdata[0]:,}<br>" +
+                      "SI Germany: %{customdata[1]:.2f}<br>" +
+                      "SI Europe: %{customdata[2]:.2f}<br>" +
+                      "Median FWCI: %{customdata[3]:.2f}<br>" +
+                      "International: %{customdata[4]:.1f}%<br>" +
+                      "CAGR: %{customdata[5]:+.1f}%<extra></extra>",
+        tiling=dict(pad=2),
+    )
+
+else:
+    # Hierarchical treemap: all levels
+    df_plot = df_treemap.copy()
+    
     if color_metric == "fwci_median":
         fig_treemap = px.treemap(
-            df_treemap,
+            df_plot,
             ids="id",
             names="name",
             parents="parent_id",
@@ -193,10 +233,9 @@ if treemap_mode == "hierarchical":
             ],
             range_color=[0, 2],
         )
-        colorbar_title = "Median FWCI"
     elif color_metric == "cagr":
         fig_treemap = px.treemap(
-            df_treemap,
+            df_plot,
             ids="id",
             names="name",
             parents="parent_id",
@@ -207,12 +246,11 @@ if treemap_mode == "hierarchical":
                 [0.5, "#F4D570"],    # Yellow for 0
                 [1.0, "#60CCAA"],    # Green for positive
             ],
-            range_color=[-0.2, 0.2],  # -20% to +20% CAGR
+            range_color=[-0.2, 0.2],
         )
-        colorbar_title = "CAGR"
     else:  # pct_international
         fig_treemap = px.treemap(
-            df_treemap,
+            df_plot,
             ids="id",
             names="name",
             parents="parent_id",
@@ -220,15 +258,14 @@ if treemap_mode == "hierarchical":
             color="pct_international",
             color_continuous_scale="Blues",
         )
-        colorbar_title = "% Int'l"
     
-    # Update hover template for hierarchical mode
+    # Hover template for hierarchical mode
     fig_treemap.update_traces(
         customdata=np.stack([
-            df_treemap["pubs"],
-            df_treemap["fwci_median"],
-            df_treemap["pct_international"] * 100,
-            df_treemap["cagr"] * 100,
+            df_plot["pubs"],
+            df_plot["fwci_median"],
+            df_plot["pct_international"] * 100,
+            df_plot["cagr"] * 100,
         ], axis=-1),
         hovertemplate="<b>%{label}</b><br>" +
                       "Publications: %{customdata[0]:,}<br>" +
@@ -238,118 +275,9 @@ if treemap_mode == "hierarchical":
         tiling=dict(pad=1),
     )
 
-else:
-    # =========================================================================
-    # SPECIALIZATION MODE: Fields only, sized by SI
-    # =========================================================================
-    st.markdown("""
-    **How to read this chart**: Each rectangle represents a **field** (26 fields total). 
-    **Size reflects the Specialization Index** — larger rectangles indicate fields where OVGU 
-    has a higher concentration of research compared to the reference baseline.
-    
-    Specialization Index (SI) is calculated at the field level only, comparing OVGU's publication 
-    share in each field against national (Germany) or European averages. SI > 1 means OVGU is 
-    more specialized than the baseline.
-    """)
-    
-    # SI baseline selector
-    si_baseline = st.radio(
-        "Specialization baseline:",
-        ["si_germany", "si_europe"],
-        format_func=lambda x: {
-            "si_germany": "🇩🇪 Germany",
-            "si_europe": "🇪🇺 Europe",
-        }.get(x, x),
-        horizontal=True,
-        key="si_baseline"
-    )
-    
-    # Color metric for SI mode
-    color_metric_si = st.selectbox(
-        "Color by:",
-        ["fwci_median", "pct_international", "cagr"],
-        format_func=lambda x: {
-            "fwci_median": "Median FWCI (citation impact)",
-            "pct_international": "% International collaborations",
-            "cagr": "CAGR 2020-24 (growth rate)",
-        }.get(x, x),
-        key="treemap_color_si"
-    )
-    
-    # Filter to fields with valid SI values
-    df_si = df_treemap_fields[df_treemap_fields[si_baseline].notna() & (df_treemap_fields[si_baseline] > 0)].copy()
-    
-    if df_si.empty:
-        st.warning("No Specialization Index data available.")
-        st.stop()
-    
-    # Build treemap sized by SI
-    if color_metric_si == "fwci_median":
-        fig_treemap = px.treemap(
-            df_si,
-            ids="id",
-            names="name",
-            parents=None,  # Flat structure, no hierarchy
-            values=si_baseline,
-            color="fwci_median",
-            color_continuous_scale=[
-                [0.0, "#EC8773"],
-                [0.5, "#F4D570"],
-                [1.0, "#60CCAA"],
-            ],
-            range_color=[0, 2],
-        )
-        colorbar_title = "Median FWCI"
-    elif color_metric_si == "cagr":
-        fig_treemap = px.treemap(
-            df_si,
-            ids="id",
-            names="name",
-            parents=None,
-            values=si_baseline,
-            color="cagr",
-            color_continuous_scale=[
-                [0.0, "#EC8773"],
-                [0.5, "#F4D570"],
-                [1.0, "#60CCAA"],
-            ],
-            range_color=[-0.2, 0.2],
-        )
-        colorbar_title = "CAGR"
-    else:  # pct_international
-        fig_treemap = px.treemap(
-            df_si,
-            ids="id",
-            names="name",
-            parents=None,
-            values=si_baseline,
-            color="pct_international",
-            color_continuous_scale="Blues",
-        )
-        colorbar_title = "% Int'l"
-    
-    # Update hover template for SI mode
-    si_label = "SI Germany" if si_baseline == "si_germany" else "SI Europe"
-    fig_treemap.update_traces(
-        customdata=np.stack([
-            df_si["pubs"],
-            df_si["si_germany"],
-            df_si["si_europe"],
-            df_si["fwci_median"],
-            df_si["pct_international"] * 100,
-            df_si["cagr"] * 100,
-        ], axis=-1),
-        hovertemplate="<b>%{label}</b><br>" +
-                      "Publications: %{customdata[0]:,}<br>" +
-                      "SI Germany: %{customdata[1]:.2f}<br>" +
-                      "SI Europe: %{customdata[2]:.2f}<br>" +
-                      "Median FWCI: %{customdata[3]:.2f}<br>" +
-                      "International: %{customdata[4]:.1f}%<br>" +
-                      "CAGR: %{customdata[5]:+.1f}%<extra></extra>",
-        tiling=dict(pad=2),
-    )
+# Common settings for all modes
+fig_treemap.update_traces(branchvalues="total")
 
-# Common layout settings
 fig_treemap.update_layout(
     margin=dict(t=30, l=10, r=10, b=10),
     height=600,
