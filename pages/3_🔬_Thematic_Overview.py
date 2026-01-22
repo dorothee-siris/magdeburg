@@ -144,7 +144,7 @@ st.markdown("""
 Click to drill down from domains → fields → subfields. Use the breadcrumb trail to navigate back.
 
 **Color options:**
-- **Median FWCI**, **% International**, and **CAGR** are calculated at the publication level and aggregated across all hierarchy levels (domain, field, subfield).
+- **Median FWCI**, **% International**, and **CAGR** are calculated at all hierarchy levels (domain, field, subfield).
 - **Specialization Index (SI)** is calculated only at the field level, comparing OVGU's publication share against national (Germany) or European averages. SI > 1 means OVGU is more specialized than the baseline. When selected, only fields are displayed.
 """)
 
@@ -202,7 +202,7 @@ if color_metric == "si":
             df_plot["si_europe"],
             df_plot["fwci_median"],
             df_plot["pct_international"] * 100,
-            np.round(df_plot["cagr"] * 100, 1),
+            (df_plot["cagr"] * 100).apply(lambda x: f"{x:+.1f}" if pd.notna(x) else "N/A").tolist(),
         ], axis=-1),
         hovertemplate="<b>%{label}</b><br>" +
                       "Publications: %{customdata[0]:,}<br>" +
@@ -210,7 +210,7 @@ if color_metric == "si":
                       "SI Europe: %{customdata[2]:.2f}<br>" +
                       "Median FWCI: %{customdata[3]:.2f}<br>" +
                       "International: %{customdata[4]:.1f}%<br>" +
-                      "CAGR: %{customdata[5]:+.1f}%<extra></extra>",
+                      "CAGR: %{customdata[5]}%<extra></extra>",
         tiling=dict(pad=2),
     )
 
@@ -265,13 +265,13 @@ else:
             df_plot["pubs"],
             df_plot["fwci_median"],
             df_plot["pct_international"] * 100,
-            np.round(df_plot["cagr"] * 100, 1),
+            (df_plot["cagr"] * 100).apply(lambda x: f"{x:+.1f}" if pd.notna(x) else "N/A").tolist(),
         ], axis=-1),
         hovertemplate="<b>%{label}</b><br>" +
                       "Publications: %{customdata[0]:,}<br>" +
                       "Median FWCI: %{customdata[1]:.2f}<br>" +
                       "International: %{customdata[2]:.1f}%<br>" +
-                      "CAGR: %{customdata[3]:+.1f}%<extra></extra>",
+                      "CAGR: %{customdata[3]}%<extra></extra>",
         tiling=dict(pad=1),
     )
 
