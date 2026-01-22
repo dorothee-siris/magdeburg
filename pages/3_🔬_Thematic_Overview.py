@@ -235,7 +235,6 @@ if treemap_mode == "hierarchical":
                       "Median FWCI: %{customdata[1]:.2f}<br>" +
                       "International: %{customdata[2]:.1f}%<br>" +
                       "CAGR: %{customdata[3]:+.1f}%<extra></extra>",
-        maxdepth=2,
         tiling=dict(pad=1),
     )
 
