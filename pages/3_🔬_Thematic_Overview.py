@@ -145,9 +145,10 @@ Click to drill down from domains → fields → subfields. Use the breadcrumb tr
 
 **Color options:**
 - **Median FWCI**, **% International**, and **CAGR** are calculated at all hierarchy levels (domain, field, subfield).
-- **Specialization Index (SI)** is calculated only at the field level, comparing OVGU's publication share against national (Germany) or European averages. SI > 1 means OVGU is more specialized than the baseline. When selected, only fields are displayed.
-""")
-
+    Specialization Index (SI) compares OVGU's publication share against national (Germany) or 
+    European averages. SI > 1 means OVGU is more specialized than the baseline.
+    Domain-level SI is computed as a weighted average of field SI values (weighted by publication volume).
+    """)
 # Prepare treemap data
 df_treemap = df_treemap_raw.copy()
 df_treemap_fields = df_treemap[df_treemap["level"] == "field"].copy()
@@ -171,8 +172,9 @@ if color_metric == "si":
     si_col = "si_europe" if si_baseline else "si_germany"
     si_label = "SI Europe" if si_baseline else "SI Germany"
     
-    # Filter to fields only with valid SI
-    df_plot = df_treemap_fields[df_treemap_fields[si_col].notna() & (df_treemap_fields[si_col] > 0)].copy()
+    # Filter to domains and fields with valid SI
+    df_treemap_domains_fields = df_treemap[df_treemap["level"].isin(["domain", "field"])].copy()
+    df_plot = df_treemap_domains_fields[df_treemap_domains_fields[si_col].notna() & (df_treemap_domains_fields[si_col] > 0)].copy()
     
     if df_plot.empty:
         st.warning("No Specialization Index data available.")
@@ -183,7 +185,7 @@ if color_metric == "si":
         df_plot,
         ids="id",
         names="name",
-        parents=[""]*len(df_plot),  # Flat structure, no parents
+        parents="parent_id",  # Hierarchical: domains -> fields
         values="pubs",
         color=si_col,
         color_continuous_scale=[
