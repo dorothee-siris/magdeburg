@@ -133,6 +133,16 @@ def parse_pubs_per_domain(blob):
                 pass
     return result
 
+
+def format_float(val, decimals=2):
+    """Format float values with specified decimals."""
+    if pd.isna(val):
+        return "—"
+    try:
+        return f"{float(val):.{decimals}f}"
+    except (ValueError, TypeError):
+        return "—"
+
 # =============================================================================
 # Section 1: Interactive Treemap
 # =============================================================================
@@ -313,6 +323,7 @@ for _, row in df_domains.iterrows():
         "Domain": f"{get_domain_emoji(dom_name)} {dom_name}",
         "Pubs": int(row["pubs_total"]),
         "% Total": format_pct(row.get("pubs_pct_of_um", row.get("pubs_pct_of_ul"))),
+        "FWCI median": format_float(row.get("fwci_median")),
         "% Int'l": format_pct(row.get("pct_international")),
         "% Company": format_pct(row.get("pct_company")),
         "% SDG": format_pct(row.get("pct_sdg")),
@@ -415,6 +426,7 @@ for _, row in df_fields_table.iterrows():
         "Field": row["name"],
         "Pubs": int(row["pubs_total"]),
         "% Total": format_pct(row.get("pubs_pct_of_um", row.get("pubs_pct_of_ul"))),
+        "FWCI median": format_float(row.get("fwci_median")),
         "SI Germany": format_si(row.get("si_germany")),
         "SI Europe": format_si(row.get("si_europe")),
         "NCI": format_si(row.get("nci")),
@@ -572,6 +584,7 @@ for _, row in df_subfields_filtered.iterrows():
         "Field": row["field_name"] if pd.notna(row["field_name"]) else "",
         "Pubs": int(row["pubs_total"]),
         "% Total": format_pct(row.get("pubs_pct_of_um", row.get("pubs_pct_of_ul"))),
+        "FWCI median": format_float(row.get("fwci_median")),
         "% Int'l": format_pct(row.get("pct_international")),
         "% SDG": format_pct(row.get("pct_sdg")),
         "CAGR": format_cagr(row.get("cagr_2020_2024", row.get("cagr_2019_2023"))),
@@ -634,6 +647,7 @@ for _, row in df_topics_filtered.iterrows():
         "Subfield": row["subfield_name"] if pd.notna(row["subfield_name"]) else "",
         "Pubs": int(row["pubs_total"]),
         "% Total": format_pct(row.get("pubs_pct_of_um", row.get("pubs_pct_of_ul"))),
+        "FWCI median": format_float(row.get("fwci_median")),
         "% Int'l": format_pct(row.get("pct_international")),
         "% SDG": format_pct(row.get("pct_sdg")),
         "CAGR": format_cagr(row.get("cagr_2020_2024", row.get("cagr_2019_2023"))),
@@ -673,6 +687,7 @@ for _, row in df_research.iterrows():
         "Topic": row["name"],
         "Pubs": int(row["pubs_total"]),
         "% Total": format_pct(row.get("pubs_pct_of_um", row.get("pubs_pct_of_ul"))),
+        "FWCI median": format_float(row.get("fwci_median")),
         "% Int'l": format_pct(row.get("pct_international")),
         "% Company": format_pct(row.get("pct_company")),
         "% SDG": format_pct(row.get("pct_sdg")),
