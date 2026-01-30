@@ -395,7 +395,7 @@ if boxplot_data:
             x1=i + 0.4,
             y0=item["p50"],
             y1=item["p50"],
-            line=dict(color="white", width=2, dash="dot"),
+            line=dict(color="black", width=2, dash="dot"),
             xref="x",
             yref="y",
         )
@@ -538,7 +538,7 @@ if boxplot_data_fields:
             x1=i + 0.4,
             y0=item["p50"],
             y1=item["p50"],
-            line=dict(color="white", width=2, dash="dot"),
+            line=dict(color="black", width=2, dash="dot"),
             xref="x",
             yref="y",
         )
