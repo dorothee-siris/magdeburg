@@ -382,12 +382,10 @@ if boxplot_data:
             upperfence=[upper],
             marker_color=item["color"],
             fillcolor=item["color"],
-            line=dict(color=item["color"]),
+            line=dict(color=item["color"], width=1.5),
             boxpoints=False,
             name=item["domain"],
             showlegend=False,
-            median_visible=True,
-            line_width=1.5,
         ))
         
         # Add dotted median line
@@ -527,12 +525,10 @@ if boxplot_data_fields:
             upperfence=[upper],
             marker_color=item["color"],
             fillcolor=item["color"],
-            line=dict(color=item["color"]),
+            line=dict(color=item["color"], width=1.5),
             boxpoints=False,
             name=f"{item['field']} (n={item['count']:,})",
             showlegend=False,
-            median_visible=True,
-            line_width=1.5,
         ))
         
         # Add dotted median line
