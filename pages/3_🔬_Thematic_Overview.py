@@ -391,8 +391,8 @@ if boxplot_data:
         # Add dotted median line
         fig_box.add_shape(
             type="line",
-            x0=i - 0.3,
-            x1=i + 0.3,
+            x0=i - 0.25,
+            x1=i + 0.25,
             y0=item["p50"],
             y1=item["p50"],
             line=dict(color="black", width=1, dash="dot"),
@@ -534,11 +534,11 @@ if boxplot_data_fields:
         # Add dotted median line
         fig_box_fields.add_shape(
             type="line",
-            x0=i - 0.4,
-            x1=i + 0.4,
+            x0=i - 0.25,
+            x1=i + 0.25,
             y0=item["p50"],
             y1=item["p50"],
-            line=dict(color="black", width=2, dash="dot"),
+            line=dict(color="black", width=1, dash="dot"),
             xref="x",
             yref="y",
         )
@@ -556,7 +556,7 @@ if boxplot_data_fields:
         )
     
     fig_box_fields.update_layout(
-        height=500,
+        height=600,
         margin=dict(t=30, l=50, r=30, b=160),
         yaxis_title="FWCI",
         xaxis_title="",
