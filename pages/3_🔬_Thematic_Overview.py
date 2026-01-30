@@ -391,11 +391,11 @@ if boxplot_data:
         # Add dotted median line
         fig_box.add_shape(
             type="line",
-            x0=i - 0.4,
-            x1=i + 0.4,
+            x0=i - 0.2,
+            x1=i + 0.2,
             y0=item["p50"],
             y1=item["p50"],
-            line=dict(color="black", width=2, dash="dot"),
+            line=dict(color="black", width=1, dash="dot"),
             xref="x",
             yref="y",
         )
