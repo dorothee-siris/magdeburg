@@ -340,6 +340,13 @@ st.dataframe(
 # FWCI Distribution boxplots
 st.markdown("### FWCI Distribution by Domain")
 
+st.markdown("""
+This chart shows the distribution of Field-Weighted Citation Impact (FWCI) across domains.
+By default, extreme values are hidden (showing percentiles 10-90) to facilitate comparison between domains.
+Toggle the option below to include the full range (min to max).
+""")
+
+
 use_extreme = st.toggle("Include extreme values (p0, p100)", value=False, key="domain_extreme")
 
 boxplot_data = []
@@ -359,7 +366,7 @@ if boxplot_data:
     boxplot_data = sorted(boxplot_data, key=lambda x: DOMAIN_ORDER.index(x["domain_id"]) if x["domain_id"] in DOMAIN_ORDER else 99)
     
     fig_box = go.Figure()
-    
+
     for i, item in enumerate(boxplot_data):
         if use_extreme:
             lower, upper = item["p0"], item["p100"]
@@ -379,15 +386,33 @@ if boxplot_data:
             boxpoints=False,
             name=item["domain"],
             showlegend=False,
+            median_visible=True,
+            line_width=1.5,
         ))
         
+        # Add dotted median line
+        fig_box.add_shape(
+            type="line",
+            x0=i - 0.4,
+            x1=i + 0.4,
+            y0=item["p50"],
+            y1=item["p50"],
+            line=dict(color="white", width=2, dash="dot"),
+            xref="x",
+            yref="y",
+        )
+        
+    
+    # Add count annotations (straight orientation, no "n=" prefix)
+    for i, item in enumerate(boxplot_data):
         fig_box.add_annotation(
             x=item["domain"],
-            y=-0.15,
+            y=-0.03,
             yref="paper",
-            text=f"n={item['count']:,}",
+            text=f"{item['count']:,}",
             showarrow=False,
-            font=dict(size=11, color="#666"),
+            font=dict(size=10, color="#666"),
+            textangle=0,
         )
     
     fig_box.update_layout(
@@ -396,6 +421,7 @@ if boxplot_data:
         yaxis_title="FWCI",
         xaxis_title="",
     )
+
     st.plotly_chart(fig_box, use_container_width=True)
 
 # =============================================================================
@@ -484,7 +510,7 @@ for _, row in df_fields_sorted.iterrows():
 if boxplot_data_fields:
     fig_box_fields = go.Figure()
     
-    for item in boxplot_data_fields:
+    for i, item in enumerate(boxplot_data_fields):
         if use_extreme_fields:
             lower, upper = item["p0"], item["p100"]
             range_label = "min-max"
@@ -505,7 +531,21 @@ if boxplot_data_fields:
             boxpoints=False,
             name=f"{item['field']} (n={item['count']:,})",
             showlegend=False,
+            median_visible=True,
+            line_width=1.5,
         ))
+        
+        # Add dotted median line
+        fig_box_fields.add_shape(
+            type="line",
+            x0=i - 0.4,
+            x1=i + 0.4,
+            y0=item["p50"],
+            y1=item["p50"],
+            line=dict(color="white", width=2, dash="dot"),
+            xref="x",
+            yref="y",
+        )
     
     # Add count annotations (straight orientation, no "n=" prefix)
     for i, item in enumerate(boxplot_data_fields):
@@ -515,7 +555,7 @@ if boxplot_data_fields:
             yref="paper",
             text=f"{item['count']:,}",
             showarrow=False,
-            font=dict(size=9, color="#666"),
+            font=dict(size=10, color="#666"),
             textangle=0,
         )
     
