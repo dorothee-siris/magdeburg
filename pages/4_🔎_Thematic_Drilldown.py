@@ -3,10 +3,10 @@ Thematic Drill-Down - Detailed exploration of a specific domain, field, subfield
 OVGU (Otto-von-Guericke-Universität Magdeburg) version.
 """
 
-import streamlit as st
+import streamlit as st # type: ignore
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+import plotly.express as px # type: ignore
+import plotly.graph_objects as go # type: ignore
 import re
 
 from lib.helpers import (
@@ -248,6 +248,10 @@ def render_keywords_badges(keywords):
             f'border:1px solid #bee5eb;">{kw}</span>'
         )
     st.markdown(f'<div style="margin:12px 0;">{badges_html}</div>', unsafe_allow_html=True)
+
+def pct_for_progress(series):
+    """Convert ratio to percentage and cap to [0, 100] for Streamlit ProgressColumn."""
+    return (pd.to_numeric(series, errors="coerce") * 100).clip(lower=0, upper=100)
 
 # =============================================================================
 # Section 1: Selector
@@ -576,9 +580,9 @@ if partner_data is not None:
             f"% of OVGU's {level_label}", f"% of partner's {level_label}",
             "% of collab.", "Avg FWCI", "Copubs in OpenAlex"
         ]
-        int_display[f"% of OVGU's {level_label}"] = int_display[f"% of OVGU's {level_label}"] * 100
-        int_display["% of collab."] = int_display["% of collab."] * 100
-        int_display[f"% of partner's {level_label}"] = int_display[f"% of partner's {level_label}"] * 100
+        int_display[f"% of OVGU's {level_label}"] = pct_for_progress(int_display[f"% of OVGU's {level_label}"])
+        int_display["% of collab."] = pct_for_progress(int_display["% of collab."])
+        int_display[f"% of partner's {level_label}"] = pct_for_progress(int_display[f"% of partner's {level_label}"])
         int_display["Avg FWCI"] = int_display["Avg FWCI"].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "—")
         
         st.dataframe(
@@ -618,9 +622,9 @@ if partner_data is not None:
             f"% of OVGU's {level_label}", f"% of partner's {level_label}",
             "% of collab.", "Avg FWCI", "Copubs in OpenAlex"
         ]
-        de_display[f"% of OVGU's {level_label}"] = de_display[f"% of OVGU's {level_label}"] * 100
-        de_display["% of collab."] = de_display["% of collab."] * 100
-        de_display[f"% of partner's {level_label}"] = de_display[f"% of partner's {level_label}"] * 100
+        de_display[f"% of OVGU's {level_label}"] = pct_for_progress(de_display[f"% of OVGU's {level_label}"])
+        de_display["% of collab."] = pct_for_progress(de_display["% of collab."])
+        de_display[f"% of partner's {level_label}"] = pct_for_progress(de_display[f"% of partner's {level_label}"])
         de_display["Avg FWCI"] = de_display["Avg FWCI"].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "—")
         
         st.dataframe(

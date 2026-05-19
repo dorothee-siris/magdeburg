@@ -10,11 +10,11 @@ Sections:
 6. Topics table (Topic Modeling) + Heatmap
 """
 
-import streamlit as st
+import streamlit as st # type: ignore
 import pandas as pd
 import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
+import plotly.express as px # type: ignore
+import plotly.graph_objects as go # type: ignore
 
 from lib.helpers import (
     DOMAIN_ORDER,
